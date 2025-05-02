@@ -11,6 +11,7 @@ nano setup-network.sh
 chmod +x setup-network.sh # Make it executable
 
 sudo ./setup-network.sh # Run with root privileges
+```
 
 #!/bin/bash
 
