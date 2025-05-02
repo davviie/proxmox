@@ -29,7 +29,7 @@ DNS3="1.1.1.1"  # Tertiary DNS server
 
 echo "=== Starting Network Configuration ==="
 
-# --- Step 1: Update Netplan Configuration ---
+# --- Step 1: Write Netplan Configuration ---
 echo "[Step 1] Writing static IP configuration to Netplan..."
 NETPLAN_FILE="/etc/netplan/01-netcfg.yaml"
 cat <<EOF | sudo tee $NETPLAN_FILE > /dev/null
@@ -39,7 +39,9 @@ network:
         $IFACE:
             addresses:
                 - $IPADDR/$CIDR
-            gateway4: $GATEWAY
+            routes:
+                - to: default
+                  via: $GATEWAY
             nameservers:
                 addresses:
                     - $DNS1
@@ -47,6 +49,12 @@ network:
                     - $DNS3
 EOF
 echo "[INFO] Netplan configuration written to $NETPLAN_FILE."
+
+# Fix file permissions
+echo "[INFO] Setting correct permissions for $NETPLAN_FILE..."
+sudo chmod 600 $NETPLAN_FILE
+
+# Apply the Netplan configuration
 echo "[INFO] Applying Netplan configuration..."
 sudo netplan apply
 if [ $? -eq 0 ]; then
@@ -56,7 +64,7 @@ else
     exit 1
 fi
 
-# --- Step 2: Verify Netplan Configuration ---
+# --- Step 2: Verify Configuration ---
 echo "[Step 2] Verifying netplan configuration..."
 ip addr show $IFACE
 ip route show
