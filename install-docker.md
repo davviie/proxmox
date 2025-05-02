@@ -15,6 +15,8 @@ chmod +x setup-network.sh # Make it executable
 sudo ./setup-network.sh # Run with root privileges
 ```
 
+```bash
+
 #!/bin/bash
 
 # --- Configuration ---
@@ -69,3 +71,4 @@ if ping -c 2 1.1.1.1 >/dev/null 2>&1; then
 else
     echo "[✘] No internet access. Please verify physical connection or gateway settings."
 fi
+```
