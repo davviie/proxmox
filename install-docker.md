@@ -2,6 +2,7 @@
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/docker-vm.sh)"
 ```
 
+```bash
 # run the script below like this:
 
 #!/bin/bash
@@ -43,3 +44,31 @@ sudo systemctl enable NetworkManager
 sudo systemctl start NetworkManager
 
 echo "✅ Static IP configured and NetworkManager installed."
+
+----------------------
+
+# Interface name
+IFACE="ens18"
+
+echo "Cleaning up systemd-networkd config (if exists)..."
+sudo rm -f /etc/systemd/network/10-${IFACE}.network
+
+echo "Re-enabling NetworkManager for $IFACE..."
+# Make sure NetworkManager controls the interface
+sudo nmcli dev set "$IFACE" managed yes
+
+echo "Deleting existing NetworkManager connection for $IFACE (if any)..."
+sudo nmcli connection delete "$IFACE" 2>/dev/null
+
+echo "Creating new DHCP connection..."
+sudo nmcli connection add type ethernet ifname "$IFACE" con-name "$IFACE" autoconnect yes
+
+echo "Bringing up $IFACE..."
+sudo nmcli connection up "$IFACE"
+
+echo "✅ $IFACE is now set to DHCP via NetworkManager."
+
+# Optional: show current IP config
+ip a show "$IFACE"
+
+```
