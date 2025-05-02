@@ -12,11 +12,10 @@ nano setup-network.sh
 ```bash
 chmod +x setup-network.sh # Make it executable
 
-sudo ./setup-network.sh # Run with root privileges
+./setup-network.sh # Run with root privileges
 ```
 
 ```bash
-
 #!/bin/bash
 
 # --- Configuration ---
