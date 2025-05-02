@@ -20,7 +20,7 @@ chmod +x setup-network.sh # Make it executable
 
 # --- Configuration ---
 IFACE="ens18"
-IPADDR="192.168.1.100"
+IPADDR="192.168.1.77"
 NETMASK="255.255.255.0"  # Subnet mask in legacy format
 GATEWAY="192.168.1.1"
 DNS1="192.168.1.1"
