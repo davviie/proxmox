@@ -1,4 +1,6 @@
-
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/docker-vm.sh)"
+```
 
 # run the script below like this:
 
