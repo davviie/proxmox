@@ -20,94 +20,90 @@ chmod +x setup-network.sh # Make it executable
 
 # --- Configuration ---
 IFACE="ens18"
-IPADDR="192.168.1.77"
+HOST_IP="192.168.1.77"  # Current Proxmox host IP
+IPADDR="192.168.1.100"  # Static IP for the VM's network interface
 NETMASK="255.255.255.0"  # Subnet mask in legacy format
-GATEWAY="192.168.1.1"
-DNS1="192.168.1.1"
-DNS2="192.168.0.2"
-DNS3="1.1.1.1"
-DNS4="8.8.8.8"
+CIDR="24"  # CIDR notation for subnet mask
+GATEWAY="192.168.1.1"  # Default gateway for the network
+DNS1="192.168.1.1"  # Primary DNS server
+DNS2="192.168.0.2"  # Secondary DNS server
+DNS3="1.1.1.1"  # Tertiary DNS server
+DNS4="8.8.8.8"  # Quaternary DNS server
 
-# --- Convert NETMASK to CIDR ---
-CIDR=$(echo "$NETMASK" | awk -F "." '{for (i=1; i<=NF; i++) n += sprintf("%08d", and($i, 255)); gsub("0", "", n); print length(n)}')
+echo "=== Starting Network Configuration ==="
 
-# --- Check and Assign IP Address Manually ---
-echo "[+] Checking if .network file exists..."
-CONFIG_DIR="/etc/systemd/network"
-CONFIG_FILE="$CONFIG_DIR/$IFACE.network"
+# --- Step 1: Configure ens18 IP ---
+echo "[Step 1] Configuring IP address for $IFACE..."
+echo "[INFO] Flushing any existing IP addresses on $IFACE to avoid conflicts..."
+sudo ip addr flush dev $IFACE
 
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "[!] $CONFIG_FILE not found. Assigning IP address manually..."
-    sudo ip addr add $IPADDR/$CIDR dev $IFACE
-    sudo ip link set $IFACE up
-else
-    echo "[+] $CONFIG_FILE exists. Skipping manual IP assignment."
-fi
+echo "[INFO] Assigning static IP address $IPADDR/$CIDR to $IFACE..."
+sudo ip addr add $IPADDR/$CIDR dev $IFACE
 
-# --- Create systemd-networkd configuration ---
-echo "[+] Configuring systemd-networkd for $IFACE..."
+echo "[INFO] Bringing the interface $IFACE up..."
+sudo ip link set $IFACE up
 
-# Create the configuration directory if it doesn't exist
-mkdir -p "$CONFIG_DIR"
-
-# Write the configuration file
-cat <<EOF > "$CONFIG_FILE"
-[Match]
-Name=$IFACE
-
-[Network]
-Address=$IPADDR/$CIDR
-Gateway=$GATEWAY
-DNS=$DNS1
-DNS=$DNS2
-DNS=$DNS3
-DNS=$DNS4
-EOF
-
-echo "[+] Configuration written to $CONFIG_FILE."
-
-# --- Restart systemd-networkd service ---
-echo "[+] Restarting systemd-networkd service..."
-if systemctl restart systemd-networkd; then
-    echo "[✔] systemd-networkd restarted successfully."
-else
-    echo "[✘] Failed to restart systemd-networkd. Please check the service status."
-fi
-
-# --- Check and Set Default Route ---
-echo "[+] Checking default route..."
+# --- Step 2: Configure Default Route ---
+echo "[Step 2] Configuring default route via $GATEWAY..."
 DEFAULT_ROUTE=$(ip route show default | grep -c "default via $GATEWAY dev $IFACE")
 if [ "$DEFAULT_ROUTE" -eq 0 ]; then
-    echo "[!] Default route is missing. Adding default route via $GATEWAY."
-    if ping -c 1 -W 1 $GATEWAY >/dev/null 2>&1; then
-        sudo ip route add default via $GATEWAY dev $IFACE
-        echo "[✔] Default route added successfully."
-    else
-        echo "[✘] Gateway $GATEWAY is unreachable. Please verify the network connection."
-        exit 1
-    fi
+    echo "[INFO] Default route is missing. Adding default route via $GATEWAY..."
+    sudo ip route add default via $GATEWAY dev $IFACE
+    echo "[SUCCESS] Default route added successfully."
 else
-    echo "[✔] Default route is already set."
+    echo "[INFO] Default route already exists. Skipping this step."
 fi
 
-# --- Persistent DNS Configuration ---
-echo "[+] Configuring persistent DNS..."
-RESOLVED_CONF="/etc/systemd/resolved.conf"
+# --- Step 3: Fix resolv.conf with DNS servers ---
+echo "[Step 3] Updating /etc/resolv.conf with DNS servers..."
+cat <<EOF | sudo tee /etc/resolv.conf > /dev/null
+nameserver $DNS1
+nameserver $DNS2
+nameserver $DNS3
+nameserver $DNS4
+EOF
+echo "[SUCCESS] /etc/resolv.conf updated successfully."
 
-# Update the systemd-resolved configuration
-cat <<EOF > "$RESOLVED_CONF"
+echo "[INFO] Making DNS configuration persistent using systemd-resolved..."
+RESOLVED_CONF="/etc/systemd/resolved.conf"
+cat <<EOF | sudo tee $RESOLVED_CONF > /dev/null
 [Resolve]
 DNS=$DNS1 $DNS2 $DNS3 $DNS4
 EOF
+sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+echo "[INFO] Restarting systemd-resolved to apply changes..."
+sudo systemctl restart systemd-resolved
+echo "[SUCCESS] systemd-resolved restarted successfully."
 
-# Restart systemd-resolved to apply changes
-systemctl restart systemd-resolved
-
-# --- Connectivity Check ---
-echo "[+] Checking internet connectivity..."
-if ping -c 2 1.1.1.1 >/dev/null 2>&1; then
-    echo "[✔] Internet is reachable (ping to 1.1.1.1 succeeded)."
+# --- Step 4: Restart systemd-networkd ---
+echo "[Step 4] Restarting systemd-networkd service to apply network settings..."
+sudo systemctl restart systemd-networkd
+if [ $? -eq 0 ]; then
+    echo "[SUCCESS] systemd-networkd restarted successfully."
 else
-    echo "[✘] No internet access. Please verify physical connection or gateway settings."
+    echo "[ERROR] Failed to restart systemd-networkd. Please check the service status."
+    exit 1
 fi
+
+# --- Step 5: Verify Configuration ---
+echo "[Step 5] Verifying network configuration..."
+echo "[INFO] Displaying interface configuration for $IFACE:"
+ip addr show $IFACE
+
+echo "[INFO] Displaying routing table:"
+ip route show
+
+echo "[INFO] Displaying DNS configuration:"
+cat /etc/resolv.conf
+
+# --- Step 6: Check Connectivity ---
+echo "[Step 6] Checking internet connectivity..."
+if ping -c 4 1.1.1.1 >/dev/null 2>&1; then
+    echo "[SUCCESS] Internet is reachable (ping to 1.1.1.1 succeeded)."
+else
+    echo "[ERROR] No internet access. Please verify the network connection and settings."
+    exit 1
+fi
+
+echo "=== Network Configuration Completed Successfully ==="
 ```
