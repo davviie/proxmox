@@ -29,12 +29,22 @@ DNS3="1.1.1.1"
 DNS4="8.8.8.8"
 
 # --- Convert NETMASK to CIDR ---
-CIDR=$(echo "$NETMASK" | awk -F "." '{print ($1 * 16777216 + $2 * 65536 + $3 * 256 + $4); for(c = 0; c < 32; c++) if(($1 << c) & 0x80000000) break; print c}')
+CIDR=$(echo "$NETMASK" | awk -F "." '{for (i=1; i<=NF; i++) n += sprintf("%08d", and($i, 255)); gsub("0", "", n) } END { print length(n); }')
 
-# --- Create systemd-networkd configuration ---
+# --- Check and Assign IP Address Manually ---
+echo "[+] Checking if .network file exists..."
 CONFIG_DIR="/etc/systemd/network"
 CONFIG_FILE="$CONFIG_DIR/$IFACE.network"
 
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "[!] $CONFIG_FILE not found. Assigning IP address manually..."
+    sudo ip addr add $IPADDR/$CIDR dev $IFACE
+    sudo ip link set $IFACE up
+else
+    echo "[+] $CONFIG_FILE exists. Skipping manual IP assignment."
+fi
+
+# --- Create systemd-networkd configuration ---
 echo "[+] Configuring systemd-networkd for $IFACE..."
 
 # Create the configuration directory if it doesn't exist
@@ -64,7 +74,20 @@ else
     echo "[✘] Failed to restart systemd-networkd. Please check the service status."
 fi
 
-# --- Connectivity check ---
+# --- Persistent DNS Configuration ---
+echo "[+] Configuring persistent DNS..."
+cat <<EOF > /etc/resolv.conf
+nameserver $DNS1
+nameserver $DNS2
+nameserver $DNS3
+nameserver $DNS4
+EOF
+
+# Ensure systemd-resolved is set to use the custom resolv.conf
+ln -sf /etc/resolv.conf /run/systemd/resolve/resolv.conf
+systemctl restart systemd-resolved
+
+# --- Connectivity Check ---
 echo "[+] Checking internet connectivity..."
 if ping -c 2 1.1.1.1 >/dev/null 2>&1; then
     echo "[✔] Internet is reachable (ping to 1.1.1.1 succeeded)."
