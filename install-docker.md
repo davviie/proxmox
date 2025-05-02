@@ -28,7 +28,6 @@ GATEWAY="192.168.1.1"  # Default gateway for the network
 DNS1="192.168.1.1"  # Primary DNS server
 DNS2="192.168.0.2"  # Secondary DNS server
 DNS3="1.1.1.1"  # Tertiary DNS server
-DNS4="8.8.8.8"  # Quaternary DNS server
 
 echo "=== Starting Network Configuration ==="
 
@@ -60,7 +59,6 @@ cat <<EOF | sudo tee /etc/resolv.conf > /dev/null
 nameserver $DNS1
 nameserver $DNS2
 nameserver $DNS3
-nameserver $DNS4
 EOF
 echo "[SUCCESS] /etc/resolv.conf updated successfully."
 
@@ -68,7 +66,7 @@ echo "[INFO] Making DNS configuration persistent using systemd-resolved..."
 RESOLVED_CONF="/etc/systemd/resolved.conf"
 cat <<EOF | sudo tee $RESOLVED_CONF > /dev/null
 [Resolve]
-DNS=$DNS1 $DNS2 $DNS3 $DNS4
+DNS=$DNS1 $DNS2 $DNS3
 EOF
 sudo ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
 echo "[INFO] Restarting systemd-resolved to apply changes..."
