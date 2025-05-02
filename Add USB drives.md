@@ -98,3 +98,27 @@ Then start the VM — the drive should show as a new disk.
 
 🔹 Option C: Share the Drive via NFS/SMB
 You can share /mnt/external via NFS or Samba to multiple VMs/containers — great for shared media.
+
+1. Edit the /etc/fstab file
+Run:
+
+bash
+nano /etc/fstab
+
+Then add this line at the bottom:
+
+ini
+UUID=B08F-0B49 /mnt/2tb exfat defaults,uid=0,gid=0,umask=000 0 0
+
+Make sure the folder /mnt/2tb exists first:
+
+bash
+mkdir -p /mnt/2tb
+
+2. Test the mount
+After saving the file, run:
+
+bash
+mount -a
+
+If there’s no error, your drive is now properly mounted and will auto-mount at boot.
