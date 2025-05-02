@@ -32,6 +32,12 @@ bash
 mount /dev/sdb1 /mnt/external
 
 If it's NTFS, you may need ntfs-3g:
+
+If it's an NTFS drive and you want to use the ntfs-3g driver explicitly (optional):
+
+bash
+ntfs-3g /dev/sde1 /mnt/20tb
+
 apt install ntfs-3g
 
 ✅ Step 3: Make It Persistent
