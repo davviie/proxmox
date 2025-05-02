@@ -29,7 +29,7 @@ DNS3="1.1.1.1"
 DNS4="8.8.8.8"
 
 # --- Convert NETMASK to CIDR ---
-CIDR=$(echo "$NETMASK" | awk -F "." '{for (i=1; i<=NF; i++) n += sprintf("%08d", and($i, 255)); gsub("0", "", n) } END { print length(n); }')
+CIDR=$(echo "$NETMASK" | awk -F "." '{for (i=1; i<=NF; i++) n += sprintf("%08d", and($i, 255)); gsub("0", "", n); print length(n)}')
 
 # --- Check and Assign IP Address Manually ---
 echo "[+] Checking if .network file exists..."
@@ -74,17 +74,27 @@ else
     echo "[✘] Failed to restart systemd-networkd. Please check the service status."
 fi
 
+# --- Check and Set Default Route ---
+echo "[+] Checking default route..."
+DEFAULT_ROUTE=$(ip route show default | grep -c "default via $GATEWAY dev $IFACE")
+if [ "$DEFAULT_ROUTE" -eq 0 ]; then
+    echo "[!] Default route is missing. Adding default route via $GATEWAY."
+    sudo ip route add default via $GATEWAY dev $IFACE
+else
+    echo "[✔] Default route is already set."
+fi
+
 # --- Persistent DNS Configuration ---
 echo "[+] Configuring persistent DNS..."
-cat <<EOF > /etc/resolv.conf
-nameserver $DNS1
-nameserver $DNS2
-nameserver $DNS3
-nameserver $DNS4
+RESOLVED_CONF="/etc/systemd/resolved.conf"
+
+# Update the systemd-resolved configuration
+cat <<EOF > "$RESOLVED_CONF"
+[Resolve]
+DNS=$DNS1 $DNS2 $DNS3 $DNS4
 EOF
 
-# Ensure systemd-resolved is set to use the custom resolv.conf
-ln -sf /etc/resolv.conf /run/systemd/resolve/resolv.conf
+# Restart systemd-resolved to apply changes
 systemctl restart systemd-resolved
 
 # --- Connectivity Check ---
