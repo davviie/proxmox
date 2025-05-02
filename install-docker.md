@@ -7,7 +7,9 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/Proxmo
 ```bash
 nano setup-network.sh
 # Paste the script, save, and close (Ctrl+O, Enter, Ctrl+X).
+```
 
+```bash
 chmod +x setup-network.sh # Make it executable
 
 sudo ./setup-network.sh # Run with root privileges
