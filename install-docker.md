@@ -79,7 +79,13 @@ echo "[+] Checking default route..."
 DEFAULT_ROUTE=$(ip route show default | grep -c "default via $GATEWAY dev $IFACE")
 if [ "$DEFAULT_ROUTE" -eq 0 ]; then
     echo "[!] Default route is missing. Adding default route via $GATEWAY."
-    sudo ip route add default via $GATEWAY dev $IFACE
+    if ping -c 1 -W 1 $GATEWAY >/dev/null 2>&1; then
+        sudo ip route add default via $GATEWAY dev $IFACE
+        echo "[✔] Default route added successfully."
+    else
+        echo "[✘] Gateway $GATEWAY is unreachable. Please verify the network connection."
+        exit 1
+    fi
 else
     echo "[✔] Default route is already set."
 fi
