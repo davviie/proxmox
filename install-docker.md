@@ -8,7 +8,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/Proxmo
 set -e
 
 INTERFACE="ens18"
-STATIC_IP="192.168.0.100/24"
+STATIC_IP="192.168.1.100/24"
 GATEWAY="192.168.1.1"
 DNS_SERVER="192.168.0.2"
 
