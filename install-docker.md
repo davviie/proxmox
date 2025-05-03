@@ -3,72 +3,44 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/Proxmo
 ```
 
 ```bash
-# run the script below like this:
-
 #!/bin/bash
 
-# Step 1: Configure static IP
-cat <<EOF | sudo tee /etc/systemd/network/10-ens18.network
+set -e
+
+INTERFACE="ens18"
+STATIC_IP="192.168.0.100/24"
+GATEWAY="192.168.1.1"
+DNS_SERVER="192.168.0.2"
+
+echo "[+] Creating /etc/systemd/network/10-${INTERFACE}.network"
+cat <<EOF > /etc/systemd/network/10-${INTERFACE}.network
 [Match]
-Name=ens18
+Name=${INTERFACE}
 
 [Network]
-Address=192.168.1.152/24
-Gateway=192.168.1.1
-DNS=1.1.1.1
+Address=${STATIC_IP}
+Gateway=${GATEWAY}
+DNS=${DNS_SERVER}
 EOF
 
-# Step 2: Restart systemd-networkd
-sudo systemctl restart systemd-networkd
-sleep 3
+echo "[+] Linking resolv.conf to systemd stub"
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
-# Step 3: Confirm IP and routing
-ip a show ens18
-ip route
+echo "[+] Restarting network and DNS services"
+systemctl daemon-reexec
+systemctl restart systemd-networkd
+systemctl restart systemd-resolved
+systemctl enable systemd-networkd
+systemctl enable systemd-resolved
 
-# Step 4: Test internet connectivity
-echo "Testing ping to 1.1.1.1 (Cloudflare DNS)..."
-ping -c 3 1.1.1.1
+echo "[+] Network status for ${INTERFACE}:"
+ip a show ${INTERFACE}
 
-echo "Testing DNS resolution..."
-ping -c 3 google.com
+echo "[+] Testing connectivity:"
+ping -c 3 8.8.8.8 || echo "❌ Ping to 8.8.8.8 failed"
+ping -c 3 google.com || echo "❌ Ping to google.com failed"
 
-# Step 5: Install NetworkManager if ping succeeded
-echo "Installing NetworkManager..."
-sudo apt update && sudo apt install -y network-manager
+echo "[✓] Static IP and DNS setup complete."
 
-# Step 6: Disable systemd-networkd and enable NetworkManager
-sudo systemctl disable systemd-networkd
-sudo systemctl stop systemd-networkd
-sudo systemctl enable NetworkManager
-sudo systemctl start NetworkManager
-
-echo "✅ Static IP configured and NetworkManager installed."
-
-----------------------
-
-# Interface name
-IFACE="ens18"
-
-echo "Cleaning up systemd-networkd config (if exists)..."
-sudo rm -f /etc/systemd/network/10-${IFACE}.network
-
-echo "Re-enabling NetworkManager for $IFACE..."
-# Make sure NetworkManager controls the interface
-sudo nmcli dev set "$IFACE" managed yes
-
-echo "Deleting existing NetworkManager connection for $IFACE (if any)..."
-sudo nmcli connection delete "$IFACE" 2>/dev/null
-
-echo "Creating new DHCP connection..."
-sudo nmcli connection add type ethernet ifname "$IFACE" con-name "$IFACE" autoconnect yes
-
-echo "Bringing up $IFACE..."
-sudo nmcli connection up "$IFACE"
-
-echo "✅ $IFACE is now set to DHCP via NetworkManager."
-
-# Optional: show current IP config
-ip a show "$IFACE"
 
 ```
