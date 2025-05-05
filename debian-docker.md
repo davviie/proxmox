@@ -183,19 +183,58 @@ If you run into issues, refer to the official Docker documentation or revisit th
 
 ---
 
-## 🔗 Useful Links
+## One Block
 
-* [Docker Official Documentation](https://docs.docker.com/)
+```bash
+# Update package list and upgrade packages
+sudo apt update && sudo apt upgrade -y
 
-````
+# Install necessary packages for adding a new repository
+sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
 
-### Explanation:
+# Add Docker's official GPG key
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-- The markdown is structured with sections clearly defined using headings (`#` for main headings, `##` for sub-headings).
-- **Commands** are placed in fenced code blocks using triple backticks (```) for easy copy-pasting.
-- Sections like **Post-Installation Steps** and **Troubleshooting** are clearly outlined, and each step is explained with its respective command.
-  
-This file is now ready to be copied into a `.md` file and is designed to match the formatting you requested.
+# Add Docker repository to APT sources
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-Let me know if there’s anything else you’d like to adjust!
-````
+# Update package list again with the Docker repository added
+sudo apt update
+
+# Install Docker Engine
+sudo apt install docker-ce docker-ce-cli containerd.io -y
+
+# Verify Docker installation
+docker --version
+
+# Add your user to the Docker group to run Docker commands without sudo
+sudo usermod -aG docker $USER
+# Log out and log back in, or apply changes immediately with:
+newgrp docker
+
+# Enable Docker to start on boot
+sudo systemctl enable docker
+
+# Start Docker service
+sudo systemctl start docker
+
+# Test Docker installation by running a test container
+docker run hello-world
+
+# If there are lock file issues during installation, remove lock files
+sudo rm /var/lib/dpkg/lock-frontend
+sudo rm /var/lib/dpkg/lock
+# Reconfigure any packages that were not fully installed
+sudo dpkg --configure -a
+
+# Fix broken packages
+sudo apt install -f
+
+# Remove problematic packages if Docker installation is blocked
+sudo apt remove --purge linux-image-<version>
+sudo apt autoremove
+
+# Reinstall Docker if necessary
+sudo apt purge docker-ce docker-ce-cli containerd.io
+sudo apt install docker-ce docker-ce-cli containerd.io
+```
