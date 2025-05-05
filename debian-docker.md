@@ -1,6 +1,4 @@
-Got it! Here's the installation guide for Docker on Debian, formatted in the style you requested, with a summary, categories, and all commands in a clean, structured `.md` format. You can copy and paste it directly into your `.md` file:
 
-````markdown
 # Docker Installation Guide for Debian
 
 This document provides a comprehensive guide for installing Docker on a Debian-based system, including step-by-step instructions and troubleshooting tips.
@@ -21,7 +19,7 @@ Update your system's package list and upgrade the installed packages to ensure e
 ```bash
 # Update package list and upgrade packages
 sudo apt update && sudo apt upgrade -y
-````
+```
 
 ---
 
